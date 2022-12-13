@@ -195,13 +195,19 @@ List<List<String>> groupOnEmptyLine(List<String> lines) {
   return groups;
 }
 
+List<T> sorted<T>(List<T> l) {
+  var s = [...l];
+  s.sort();
+  return s;
+}
+
 List<List<T>> groupsOf<T>(List<T> list, int size) {
-  if (list.length <= size) {
-    return [list];
+  var l = <List<T>>[];
+  for (int i = 0; i < list.length; i += size) {
+    var end = min(i + size, list.length);
+    l.add(list.sublist(i, end));
   }
-  var rest = groupsOf(list.sublist(size), size);
-  rest.insert(0, list.sublist(0, size));
-  return rest;
+  return l;
 }
 
 List<List<T>> group<T>(List<T> list) {
@@ -255,8 +261,8 @@ List<int> parseInts(Iterable<String> intStrs) {
   return intStrs.map<int>((v) => int.parse(v)).toList();
 }
 
-Map<T, int> count<T>(Iterable<T> elems) {
-  var counts = <T, int>{};
+HashMap<T, int> count<T>(Iterable<T> elems) {
+  var counts = HashMap<T, int>();
 
   for (var elem in elems) {
     counts.update(elem, (count) => count + 1, ifAbsent: () => 1);
@@ -637,7 +643,7 @@ class Graph<T> {
   Graph(this.nodes, this.edges);
 
   static Graph<T> fromEdges<T>(Iterable<List<T>> edges) {
-    var nodes = HashSet<T>.from([]);
+    var nodes = HashSet<T>();
     var edgesG = <T, HashSet<T>>{};
 
     for (var edge in edges) {
@@ -645,8 +651,12 @@ class Graph<T> {
       var to = edge[1];
       nodes.addAll(edge);
 
-      edgesG.update(from, (tos) => also(tos, (tos) => tos.add(to)),
-          ifAbsent: () => HashSet.from([to]));
+      var edgesTo = edgesG[from];
+      if (edgesTo == null) {
+        edgesTo = HashSet();
+        edgesG[from] = edgesTo;
+      }
+      edgesTo.add(to);
     }
 
     return Graph(nodes, edgesG);
@@ -675,34 +685,38 @@ T identity<T>(T x) {
   return x;
 }
 
+//inclusive
 List<int> primes(int n) {
-  int nextRangeEnd = 30;
   List<int> p = [];
-  primesUntil(nextRangeEnd, p);
   while (p.length < n) {
-    nextRangeEnd *= 2;
-    primesUntil(nextRangeEnd, p);
+    _morePrimes(p);
   }
   return p.sublist(0, n);
 }
 
-void primesUntil(int n, List<int> knownPrimes) {
-  if (n < 3) {
-    knownPrimes.clear();
-    return;
+//inclusive
+List<int> primesUntil(int n) {
+  List<int> p = [];
+  _morePrimes(p);
+  while (p.last < n) {
+    _morePrimes(p);
   }
+  for (int i = p.length - 1; i >= 0; i--) {
+    if (p[i] <= n) {
+      return p.sublist(0, i + 1);
+    }
+  }
+  throw Exception("illegal state");
+}
 
+void _morePrimes(List<int> knownPrimes) {
   if (knownPrimes.length < 10) {
     List<int> p = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29];
     knownPrimes.addAll(p.sublist(knownPrimes.length));
   }
 
-  if (n < 31) {
-    knownPrimes.retainWhere((e) => e < n);
-    return;
-  }
-
   int lastKnownPrime = knownPrimes.last;
+  int n = lastKnownPrime * lastKnownPrime;
   List<bool> mp = List.generate(n - lastKnownPrime - 1, (index) => true);
 
   for (var e in knownPrimes) {
@@ -1121,6 +1135,37 @@ num inc(num a) {
 
 num dec(num a) {
   return a - 1;
+}
+
+int lcm(List<int> ints) {
+  var factors = <int, int>{};
+  var ps = primesUntil(maxInList(ints));
+  for (var n in ints) {
+    for (var entry in primeFactors(n, ps).entries) {
+      factors.update(entry.key, (v) => max(v, entry.value),
+          ifAbsent: () => entry.value);
+    }
+  }
+  return factors.entries
+      .fold<int>(1, (s, entry) => s * power(entry.key, entry.value));
+}
+
+Map<int, int> primeFactors(int n, List<int> primes) {
+  var f = <int, int>{};
+  var n2 = n;
+  for (var p in primes) {
+    if (n2 % p == 0) {
+      f[p] = 0;
+    }
+    while (n2 % p == 0) {
+      f[p] = f[p]! + 1;
+      n2 = n2 ~/ p;
+    }
+    if (n2 == 1) {
+      return f;
+    }
+  }
+  throw Exception("not enough primes provided");
 }
 
 abstract class StringTransformerBuilder {}

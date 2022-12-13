@@ -1,3 +1,5 @@
+import 'dart:collection';
+
 import '../common.dart';
 
 void main() async {
@@ -5,46 +7,44 @@ void main() async {
 }
 
 int simRope(String input, int length) {
-  var data = smartParse(input)
-      .expand((line) => List.filled(line[1], line[0]))
-      .toList() as List;
-  var rope = List.generate(length, (i) => Tuple<int, int>(0, 0));
-  var pos = SetWith.fromIterable<Tuple<int, int>>(
-      [Tuple<int, int>(0, 0)], (t) => t.x * data.length + t.y);
+  var data = input
+      .split("\n")
+      .expand((line) =>
+          List.filled(parseInt(line.substring(2)), line.codeUnitAt(0)))
+      .toList();
+  var rope = List.filled(length * 2, 0);
+  int p(int a) => a.abs() * 2 + (a.sign >> 1) + 1; // convert a to positiv int
+  int h(int x, int y) => (((x + y) * (x + y + 1)) >> 1) + y; // Cantor hash
+  var pos = HashSet<int>(hashCode: identity<int>);
+  pos.add(h(p(0), p(0)));
   for (var dir in data) {
     switch (dir) {
-      case "U":
-        rope[0].y++;
+      case 85: //U
+        rope[1]++;
         break;
-      case "D":
-        rope[0].y--;
+      case 68: //D
+        rope[1]--;
         break;
-      case "R":
-        rope[0].x++;
+      case 82: //R
+        rope[0]++;
         break;
-      case "L":
-        rope[0].x--;
+      case 76: //L
+        rope[0]--;
         break;
     }
-    for (int i = 1; i < rope.length; i++) {
-      var head = rope[i - 1];
-      var tail = rope[i];
-      var xHead = head.x;
-      var yHead = head.y;
-      var xTail = tail.x;
-      var yTail = tail.y;
-      var doY = (yHead - yTail).abs() > 1;
-      var doX = (xHead - xTail).abs() > 1;
-      var doX2 = doX || (xHead - xTail).abs() == 1 && doY;
-      var doY2 = doY || (yHead - yTail).abs() == 1 && doX;
-      if (doX2) {
-        tail.x += (xHead - xTail) ~/ (xHead - xTail).abs();
-      }
-      if (doY2) {
-        tail.y += (yHead - yTail) ~/ (yHead - yTail).abs();
+    for (int i = 2; i < rope.length; i += 2) {
+      var xHead = rope[i - 2];
+      var yHead = rope[i - 1];
+      var xTail = rope[i];
+      var yTail = rope[i + 1];
+      var yDist = yHead - yTail;
+      var xDist = xHead - xTail;
+      if (xDist.abs() | yDist.abs() > 1) {
+        rope[i] += xDist.sign;
+        rope[i + 1] += yDist.sign;
       }
     }
-    pos.add(rope.last);
+    pos.add(h(p(rope[rope.length - 2]), p(rope[rope.length - 1])));
   }
   return pos.length;
 }

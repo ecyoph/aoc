@@ -1,15 +1,17 @@
+import 'dart:collection';
+
 import '../common.dart';
 
 dynamic solveFor03_1(String input) {
   var lines = splitLines(input);
   var bags = lines
       .map((line) => [
-            line.codeUnits.sublist(0, line.length ~/ 2).toSet(),
-            line.codeUnits.sublist(line.length ~/ 2).toSet()
+            HashSet.from(line.codeUnits.sublist(0, line.length ~/ 2)),
+            HashSet.from(line.codeUnits.sublist(line.length ~/ 2))
           ])
       .toList();
   return sum(bags
-      .map((e) => sum(e[0].intersection(e[1])))
+      .map((e) => e[0].intersection(e[1]).first)
       .map((e) => e >= 65 && e <= 90 ? e - 38 : e - 96)).toString();
 }
 
@@ -20,16 +22,15 @@ dynamic solveFor03_2(String input) {
           line.codeUnits.map((e) => e >= 65 && e <= 90 ? e - 38 : e - 96)))
       .toList();
   var groups = groupsOf(bags, 3);
-  common(Map<int, int> x, Map<int, int> y, Map<int, int> z) {
-    var c = x.keys
-        .toSet()
-        .intersection(y.keys.toSet())
-        .intersection(z.keys.toSet())
+  int common(List<HashMap<int, int>> x) {
+    var c = HashSet.from(x[0].keys)
+        .intersection(HashSet.from(x[1].keys))
+        .intersection(HashSet.from(x[2].keys))
         .first;
     return c;
   }
 
-  return sum(groups.map((g) => apply(common, g))).toString();
+  return sum(groups.map(common)).toString();
 }
 
 AOC addDay03({AOC? aoc = null}) {
